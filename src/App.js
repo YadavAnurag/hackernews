@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import axios from 'axios';
 import deleteLogo from './deleteLogo2.png';
 require('./App.css');
 
@@ -11,6 +12,7 @@ const PARAM_PAGE = 'page=';
 const PARAM_HPP = 'hitsPerPage=';
 
 class App extends Component {
+  _isMounted = false;
   constructor(props) {
     super(props);
 
@@ -18,6 +20,7 @@ class App extends Component {
       results: null,
       searchKey: '',
       searchTerm: DEFAULT_QUERY,
+      error: null,
     };
 
     this.needsToSearchTopStories = this.needsToSearchTopStories.bind(this);
@@ -50,17 +53,19 @@ class App extends Component {
   }
 
   fetchSearchTopStories(searchTerm, page=0) {
-    console.log(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`)
-    fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`)
-      .then(response => response.json())
-      .then(result => this.setSearchTopStories(result))
-      .catch(e => e);
+    axios.get(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`)
+      .then(result => this._isMounted && this.setSearchTopStories(result.data))
+      .catch(error => this._isMounted && this.setState({error}));
   }
 
   componentDidMount() {
+    this._isMounted = true;
     const { searchTerm } = this.state;
     this.setState({ searchKey: searchTerm });
     this.fetchSearchTopStories(searchTerm);
+  }
+  componentWillUnmount(){
+    this._isMounted = false;
   }
 
   onSearchChange(event) {
@@ -94,7 +99,8 @@ class App extends Component {
     const {
       searchTerm,
       results,
-      searchKey
+      searchKey,
+      error,
     } = this.state;
 
     const page = (
@@ -108,6 +114,8 @@ class App extends Component {
       results[searchKey] &&
       results[searchKey].hits
     ) || [];
+
+    
     return (
       <div className="page">
         <div className="interactions m-4 p-3">
@@ -120,9 +128,13 @@ class App extends Component {
             Search
           </Search>
         </div>
-        {<Table
-          list={list}
-          onDismiss={this.onDismiss}
+        {error
+        ? <div className='interactions'>
+            <p className='display-3'>आप गलत निकल लिए हैं...!</p>
+          </div>
+        : <Table
+            list={list}
+            onDismiss={this.onDismiss}
           />
         }
         <div className='interactions'>
@@ -228,7 +240,11 @@ const Button = ({ onClick, className = '', children }) =>
   </button>
 
 export default App;
-
+export {
+  Button,
+  Search,
+  Table
+}
 // Mounting Lifecycle
 // constructor()
 // componentWillMount()
